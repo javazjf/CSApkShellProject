@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
 	}
 	cout<<"Uncompress APK file success!"<<endl;
 
-
+	apk.decodeAndroidManifest();
 	return 0;
 }
 

@@ -12,7 +12,10 @@
 #include <string>
 #include <iostream>
 #include <direct.h>
+#include "AxmlParser.h"
 using namespace std;
+
+const string ANDROIDMANIFEST_XML = "AndroidManifest.xml";
 
 int mkdir_r(const char *path) {
 	if (path == NULL) {
@@ -55,15 +58,17 @@ ApkFile::ApkFile(string path) {
 void ApkFile::unzip() {
 	char *dir;
 	dir = getcwd(NULL, 0);
-	cout << "Current Working Directory:" << dir << ",Apk File:" << this->mApkFilePath
-			<< endl;
+	cout << "Current Working Directory:" << dir << ",Apk File:"
+			<< this->mApkFilePath << endl;
 	int loc = this->mApkFilePath.find_last_of("/");
 	int dot = this->mApkFilePath.find_last_of(".");
 	if (loc == -1) {
-		this->mUncompressPath += this->mApkFilePath.substr(0, this->mApkFilePath.length() - 4);
+		this->mUncompressPath += this->mApkFilePath.substr(0,
+				this->mApkFilePath.length() - 4);
 	} else {
 		this->mUncompressPath += this->mApkFilePath.substr(0, loc + 1);
-		this->mUncompressPath += this->mApkFilePath.substr(loc + 1, dot - loc - 1);
+		this->mUncompressPath += this->mApkFilePath.substr(loc + 1,
+				dot - loc - 1);
 	}
 	char dos_cmd[256];
 	strcpy(dos_cmd, this->mUncompressPath.c_str());
@@ -77,7 +82,7 @@ void ApkFile::unzip() {
 	uf = unzOpen64(this->mApkFilePath.c_str());
 	int result = unzGetGlobalInfo64(uf, &gi);
 	if (result != UNZ_OK)
-		cout<<"get global info error!"<<endl;
+		cout << "get global info error!" << endl;
 	char fileName[256];
 	int i = 0;
 	string subDir, subFile;
@@ -129,6 +134,54 @@ void ApkFile::unzip() {
 	free(fileName);
 }
 
+void ApkFile::decodeAndroidManifest() {
+	string manifest = this->mUncompressPath + "/" + ANDROIDMANIFEST_XML;
+	FILE *fp;
+	char *inbuf;
+	size_t insize;
+	char *outbuf;
+	size_t outsize;
+	int ret;
+	fp = fopen(manifest.c_str(), "rb");
+	if (fp == NULL) {
+		cout << "AndroidManifest.xml not found!!" << endl;
+		return;
+	}
+	fseek(fp, 0, SEEK_END);
+	insize = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+
+	inbuf = (char *) malloc(insize * sizeof(char));
+	if (inbuf == NULL) {
+		fprintf(stderr, "Error: init file buffer.\n");
+		fclose(fp);
+		return;
+	}
+
+	ret = fread(inbuf, 1, insize, fp);
+	if (ret != insize) {
+		fprintf(stderr, "Error: read file.\n");
+		free(inbuf);
+		fclose(fp);
+		return;
+	}
+
+	ret = AxmlToXml(&outbuf, &outsize, inbuf, insize);
+
+	free(inbuf);
+	fclose(fp);
+
+	if (ret == 0){
+		printf("%s", outbuf);
+		FILE *fout;
+		string out_path = this->mUncompressPath + "/" + ANDROIDMANIFEST_XML + "_bak";
+		fout = fopen(out_path.c_str(),"w");
+		fprintf(fout,outbuf);
+		fclose(fout);
+	}
+
+	free(outbuf);
+}
 string ApkFile::getUncompressPath() {
 	return this->mUncompressPath;
 }

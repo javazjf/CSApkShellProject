@@ -17,6 +17,8 @@ private:
 public:
 	ApkFile(string path);
 	void unzip();
+	void decodeAndroidManifest();
+	void modifyApplication();
 	string getUncompressPath();
 };
 
