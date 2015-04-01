@@ -19,7 +19,11 @@ int main(int argc, char *argv[]) {
 	}
 	string path = string(argv[1]);
 	ApkFile apk(path);
-	apk.unzip();
+	try{
+		apk.unzip();
+	}catch (char* e) {
+		cout<<"error:"<<endl;
+	}
 
 	if(apk.getUncompressPath() == ""){
 		cout<<"Uncompress APK file error!"<<endl;
@@ -28,6 +32,8 @@ int main(int argc, char *argv[]) {
 	cout<<"Uncompress APK file success!"<<endl;
 
 	apk.decodeAndroidManifest();
+	apk.modifyApplication();
+
 	return 0;
 }
 

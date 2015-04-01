@@ -11,11 +11,13 @@
 #include <string.h>
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <direct.h>
 #include "AxmlParser.h"
 using namespace std;
 
 const string ANDROIDMANIFEST_XML = "AndroidManifest.xml";
+const string SHELL_APPLICATION = "org.javazjf.apkshell.ShellApplication";
 
 int mkdir_r(const char *path) {
 	if (path == NULL) {
@@ -108,7 +110,6 @@ void ApkFile::unzip() {
 
 			//打开文件
 			result = unzOpenCurrentFile(uf);/* 无密码 */
-			//			result=unzOpenCurrentFilePassword(uf,"123"); /* 有密码 */
 			//读取内容
 			strcpy(fileName, subFile.c_str());
 			FILE* destFile = fopen(fileName, "wb");
@@ -130,8 +131,6 @@ void ApkFile::unzip() {
 	}
 	//关闭流
 	unzClose(uf);
-	free(dir);
-	free(fileName);
 }
 
 void ApkFile::decodeAndroidManifest() {
@@ -171,17 +170,51 @@ void ApkFile::decodeAndroidManifest() {
 	free(inbuf);
 	fclose(fp);
 
-	if (ret == 0){
-		printf("%s", outbuf);
+	if (ret == 0) {
 		FILE *fout;
-		string out_path = this->mUncompressPath + "/" + ANDROIDMANIFEST_XML + "_bak";
-		fout = fopen(out_path.c_str(),"w");
-		fprintf(fout,outbuf);
+		string out_path = this->mUncompressPath + "/" + ANDROIDMANIFEST_XML
+				+ "_bak";
+		fout = fopen(out_path.c_str(), "w");
+		fprintf(fout, outbuf);
 		fclose(fout);
 	}
 
 	free(outbuf);
 }
+
+void ApkFile::modifyApplication() {
+	string manifest_decoded = this->mUncompressPath + "/" + ANDROIDMANIFEST_XML
+			+ "_bak";
+	string manifest_decoded_modify = this->mUncompressPath + "/" + ANDROIDMANIFEST_XML
+				+ "_m";
+	ifstream infile(manifest_decoded.c_str());
+	ofstream otfile;
+	otfile.open(manifest_decoded_modify.c_str());
+	string temp;
+	unsigned int loc = 0;
+	unsigned int end = 0;
+	while(getline(infile,temp)){
+		loc = temp.find("<application",0);
+		if(loc != string::npos){
+			string name("");
+			loc = temp.find("android:name=\"",0);
+			if(loc != string::npos){
+				loc += 14;
+				end = temp.find("\"",loc);
+				temp = temp.replace(loc,(end - loc),SHELL_APPLICATION);
+				otfile<<temp<<"\n";
+			}
+		}else{
+			otfile<<temp<<"\n";
+		}
+	}
+
+	infile.close();
+	otfile.close();
+
+	remove(manifest_decoded.c_str());
+}
+
 string ApkFile::getUncompressPath() {
 	return this->mUncompressPath;
 }
